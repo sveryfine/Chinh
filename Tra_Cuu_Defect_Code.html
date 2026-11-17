@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Defect Code Lookup</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --card-active: #24324a;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --primary: #2563eb;
+      --primary-light: #38bdf8;
+      
+      --code-bg: #0f172a;
+      --code-border: #38bdf8;
+      --code-text: #38bdf8;
+
+      --en-color: #f1f5f9;
+      --vn-color: #38bdf8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: env(safe-area-inset-bottom, 24px);
+    }
+
+    /* Sticky Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 17, 32, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 16px 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #fff;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    .stats-pill {
+      font-size: 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 5px 12px;
+      border-radius: 20px;
+      color: #38bdf8;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* Search Box */
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      color: #64748b;
+      pointer-events: none;
+      width: 20px;
+      height: 20px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      border-radius: 14px;
+      padding: 13px 44px 13px 44px;
+      color: #fff;
+      font-size: 16px;
+      outline: none;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .search-input:focus {
+      border-color: #38bdf8;
+      background: #0f172a;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+    }
+
+    .search-input::placeholder {
+      color: #64748b;
+      font-size: 13.5px;
+    }
+
+    .clear-btn {
+      position: absolute;
+      right: 12px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #475569;
+      border: none;
+      color: #fff;
+      font-size: 13px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .clear-btn.visible {
+      display: flex;
+    }
+
+    /* Filter Chips */
+    .filter-chips {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .filter-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .chip.active {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
+    }
+
+    .chip-badge {
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.18);
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+
+    /* Result counter bar */
+    .result-info {
+      padding: 12px 16px 4px;
+      font-size: 12px;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Results container */
+    .results-container {
+      padding: 8px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+
+    /* Result Card */
+    .card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+      transition: transform 0.15s ease, border-color 0.15s ease;
+      cursor: pointer;
+    }
+
+    .card:active {
+      transform: scale(0.985);
+      background: var(--card-active);
+      border-color: #38bdf8;
+    }
+
+    /* Defect Code Header */
+    .card-code-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .label-header {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .code-box {
+      display: inline-block;
+      background: #0f172a;
+      border: 1.5px solid #38bdf8;
+      color: #38bdf8;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+      padding: 4px 14px;
+      border-radius: 10px;
+    }
+
+    .copy-btn {
+      background: #334155;
+      border: 1px solid #475569;
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .copy-btn:active {
+      background: #475569;
+      transform: scale(0.95);
+    }
+
+    /* Field Blocks - Exactly the 3 column names */
+    .field-box {
+      margin-top: 10px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .field-box.box-vn {
+      border-left: 4px solid #38bdf8;
+    }
+
+    .field-box.box-en {
+      border-left: 4px solid #a855f7;
+    }
+
+    .field-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 3px;
+    }
+
+    .field-value {
+      font-size: 15px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .box-vn .field-value {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .box-en .field-value {
+      color: #f1f5f9;
+      font-weight: 500;
+    }
+
+    /* Highlight matching terms */
+    mark {
+      background-color: #fbbf24;
+      color: #0f172a;
+      border-radius: 3px;
+      padding: 1px 3px;
+      font-weight: 700;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .empty-title {
+      font-size: 17px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .empty-desc {
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    .btn-reset {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Modal Backdrop */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal-content {
+      background: #1e293b;
+      width: 100%;
+      max-width: 520px;
+      border-radius: 24px 24px 0 0;
+      padding: 18px 20px 32px;
+      border-top: 1px solid #475569;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
+      animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-handle {
+      width: 44px;
+      height: 5px;
+      background: #475569;
+      border-radius: 3px;
+      margin: 0 auto 16px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1.5px solid #38bdf8;
+      color: #f8fafc;
+      padding: 12px 22px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 999;
+      opacity: 0;
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Mobile Header -->
+  <header>
+    <div class="header-top">
+      <div>
+        <div class="brand-title">Tra Cứu Mã Lỗi (Defect Code)</div>
+      </div>
+      <div class="stats-pill" id="totalCountBadge">153 mã</div>
+    </div>
+
+    <!-- Search Input -->
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input 
+        type="search" 
+        id="searchInput" 
+        class="search-input" 
+        placeholder="Nhập Defect Code, Tiếng Anh, hoặc Tiếng Việt..." 
+        autocomplete="off" 
+        autocorrect="off" 
+        autocapitalize="off" 
+        spellcheck="false"
+      >
+      <button id="clearBtn" class="clear-btn" title="Xóa">✕</button>
+    </div>
+
+    <!-- Filter Chips -->
+    <div class="filter-chips">
+      <button class="chip active" data-filter="ALL">
+        <span>Tất cả</span>
+        <span class="chip-badge" id="badgeAll">153</span>
+      </button>
+      <button class="chip" data-filter="S">
+        <span>Mã S (An toàn)</span>
+        <span class="chip-badge">15</span>
+      </button>
+      <button class="chip" data-filter="P">
+        <span>Mã P (Chức năng)</span>
+        <span class="chip-badge">90</span>
+      </button>
+      <button class="chip" data-filter="A">
+        <span>Mã A (Ngoại quan)</span>
+        <span class="chip-badge">48</span>
+      </button>
+    </div>
+  </header>
+
+
+  <!-- Results Count Bar -->
+  <div class="result-info">
+    <span id="resultCountText">Đang hiển thị 153 mã</span>
+  </div>
+
+  <!-- Results List -->
+  <main class="results-container" id="resultsContainer">
+    <!-- Populated by JavaScript -->
+  </main>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="emptyState" style="display: none;">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-title">Không tìm thấy kết quả phù hợp</div>
+    <div class="empty-desc">Thử tìm kiếm với từ khóa khác</div>
+    <button class="btn-reset" onclick="resetSearch()">Xóa tìm kiếm</button>
+  </div>
+
+  <!-- Detail Bottom Sheet Modal -->
+  <div class="modal-backdrop" id="detailModal">
+    <div class="modal-content" id="modalContent">
+      <div class="modal-handle"></div>
+      
+      <!-- 1. Defect Code -->
+      <div style="margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div class="field-name" style="margin-bottom: 0;">Defect Code</div>
+          <button class="copy-btn" id="btnModalCopyCode" title="Sao chép Defect Code">📋 Copy Code</button>
+        </div>
+        <div id="modalCode" class="code-box" style="font-size: 22px; padding: 6px 18px;"></div>
+      </div>
+
+      <!-- 2. Defect Description In Vietnamese -->
+      <div class="field-box box-vn" style="margin-bottom: 12px; padding: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div class="field-name" style="margin-bottom: 0;">Defect Description In Vietnamese</div>
+          <button class="copy-btn" id="btnModalCopyVn" title="Sao chép tiếng Việt">📋 Copy</button>
+        </div>
+        <div class="field-value" id="modalVn" style="font-size: 16px; margin-top: 4px; font-weight: 700;"></div>
+      </div>
+
+      <!-- 3. Defect Description In English -->
+      <div class="field-box box-en" style="margin-bottom: 20px; padding: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div class="field-name" style="margin-bottom: 0;">Defect Description In English</div>
+          <button class="copy-btn" id="btnModalCopyEn" title="Sao chép tiếng Anh">📋 Copy</button>
+        </div>
+        <div class="field-value" id="modalEn" style="font-size: 15px; margin-top: 4px;"></div>
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <button class="btn-reset" style="flex: 1; padding: 14px; background: #2563eb;" id="btnModalCopy">
+          📋 Sao chép toàn bộ
+        </button>
+        <button class="btn-reset" style="padding: 14px 22px; background: #334155; color: #cbd5e1;" id="btnModalClose">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <span>✅</span>
+    <span id="toastMsg">Đã sao chép!</span>
+  </div>
+
+  <script>
+    // Embedded Data directly extracted from Copy of Defected code (1).xlsx
+    const RAW_DATA = [
+    {
+        "code":  "S001",
+        "en":  "Rating Label defect(illegible, incorrect, missing)",
+        "vn":  "Tem (mất chứ, sai thông tin, thiếu tem)"
+    },
+    {
+        "code":  "S002",
+        "en":  "Warning Label defect(illegible, incorrect, missing)",
+        "vn":  "Tem cảnh báo (mất chứ, sai thông tin, thiếu tem)"
+    },
+    {
+        "code":  "S003",
+        "en":  "Wire exposed (live conductor/copper/connector)",
+        "vn":  "Dây điên bị đứt (dây tiếp xúc / dây đồng / đầu nối)"
+    },
+    {
+        "code":  "S004",
+        "en":  "Sharp points/sharp or rough edges that may cause injuries",
+        "vn":  "Điểm nhọn/cạnh dày, sắc nhọn có thể gây thương tích cho người"
+    },
+    {
+        "code":  "S005",
+        "en":  "Pinch points that may crush fingers or cause other injuries",
+        "vn":  "Điểm thoát khuôn nhựa có thể  gây thương tích"
+    },
+    {
+        "code":  "S006",
+        "en":  "Hi-pot test malfunction. Current leakage",
+        "vn":  "Điện áp cao rò rỉ điện"
+    },
+    {
+        "code":  "S007",
+        "en":  "Not meeting Regulatory Requirements",
+        "vn":  "Không đáp ứng các yêu cầu của quy định an toàn"
+    },
+    {
+        "code":  "S008",
+        "en":  "Unit inadvertently turns \"on\"",
+        "vn":  "Tự động khởi động"
+    },
+    {
+        "code":  "S009",
+        "en":  "Unit remains \"on\u0027 with power switch in \"off\" position",
+        "vn":  "Máy đang chạy tự động tắt nguồn"
+    },
+    {
+        "code":  "S010",
+        "en":  "Interlock switch activated improperly: Shortage or lower spec travial distance.",
+        "vn":  "Cầu chì bất thường, chẳng hạn như ngắn mạch hoặc kích thước không đạt"
+    },
+    {
+        "code":  "S011",
+        "en":  "Unit running without Safety guard",
+        "vn":  "Máy hoạt động không có thiết bị an toàn"
+    },
+    {
+        "code":  "S012",
+        "en":  "Smoke/Burnt Smells/Sparks/Shorts",
+        "vn":  "Khói/cháy/tia lửa/ngắn mạch"
+    },
+    {
+        "code":  "S013",
+        "en":  "Suffocation holes on poly bag not meet spec",
+        "vn":  "Các lỗ thông hơi túi nhựa không đáp ứng các thông số kỹ thuật"
+    },
+    {
+        "code":  "S014",
+        "en":  "Unit power on without ALCI protection",
+        "vn":  "Thiết bị được bật nguồn mà không có bảo vệ ALCI"
+    },
+    {
+        "code":  "S015",
+        "en":  "Cliff sensor failured",
+        "vn":  "Lỗi cảm biến mặt điều khiển"
+    },
+    {
+        "code":  "P001",
+        "en":  "LED/Bulb/ Indicator/power light/lamp:  malfunction/dim",
+        "vn":  "Đèn hiển thị : mờ"
+    },
+    {
+        "code":  "P002",
+        "en":  "Noise out of spec",
+        "vn":  "Tiếng ồn vượt tiêu chuẩn (\u003e55dB)"
+    },
+    {
+        "code":  "P003",
+        "en":  "Charger intermittent/malfunction",
+        "vn":  "Bộ sạc bị lỗi"
+    },
+    {
+        "code":  "P004",
+        "en":  "Current or wattage out of spec",
+        "vn":  "Dòng điện hoặc công suất vượt tiêu chuẩn"
+    },
+    {
+        "code":  "P005",
+        "en":  "Reverse running",
+        "vn":  "Đèn led chạy đảo ngược"
+    },
+    {
+        "code":  "P006",
+        "en":  "Brush /bristle jammed test fail/loose",
+        "vn":  "Các vật liệu không khít lại"
+    },
+    {
+        "code":  "P007",
+        "en":  "PCBA malfunction/Intermittent",
+        "vn":  "PCBA lỗi"
+    },
+    {
+        "code":  "P008",
+        "en":  "Foreign material",
+        "vn":  "Vật liệu nước ngoài"
+    },
+    {
+        "code":  "P009",
+        "en":  "Wrong construction /wrong wiring",
+        "vn":  "Đi dây điện sai vị trí"
+    },
+    {
+        "code":  "P010",
+        "en":  "Part too loose/Dislocated",
+        "vn":  "Vật liệu bị lỏng / sai vị trí"
+    },
+    {
+        "code":  "P011",
+        "en":  "Part too tight to operate",
+        "vn":  "Vật liệu quá khít, khó hoạt động"
+    },
+    {
+        "code":  "P012",
+        "en":  "Excessive vibration",
+        "vn":  "Rung vượt tiêu chuẩn"
+    },
+    {
+        "code":  "P013",
+        "en":  "Poor soldering/butt-welding",
+        "vn":  "Chỗ hàn bị mỏng"
+    },
+    {
+        "code":  "P014",
+        "en":  "Unstable RPM",
+        "vn":  "Tốc độ vòng quay không ổn đinh"
+    },
+    {
+        "code":  "P015",
+        "en":  "Overheating/too hot",
+        "vn":  "Nhiệt độ tiêu thụ vượt tiêu chuẩn"
+    },
+    {
+        "code":  "P016",
+        "en":  "No function /malfunctioning/dead unit",
+        "vn":  "Không chức năng / không hoạt động"
+    },
+    {
+        "code":  "P017",
+        "en":  "Construction not as sample",
+        "vn":  "Lắp ráp không giống mẫu"
+    },
+    {
+        "code":  "P018",
+        "en":  "Poor quality of carton/gift box",
+        "vn":  "Thùng màu / carton kém chất lượng"
+    },
+    {
+        "code":  "P019",
+        "en":  "Loose packings/ protection",
+        "vn":  "Mất phụ kiện đóng gói / bảo vệ"
+    },
+    {
+        "code":  "P020",
+        "en":  "Air leakage",
+        "vn":  "Rò rỉ khí"
+    },
+    {
+        "code":  "P021",
+        "en":  "Not heating",
+        "vn":  "Không làm nóng"
+    },
+    {
+        "code":  "P022",
+        "en":  "Switch not working/malfunction",
+        "vn":  "Công tắt không hoạt động"
+    },
+    {
+        "code":  "P023",
+        "en":  "Temperature control not working",
+        "vn":  "Cảm biến nhiệt độ (TCO) không hoạt động"
+    },
+    {
+        "code":  "P024",
+        "en":  "Water spray not working",
+        "vn":  "Thiết bị phun nước không hoạt động"
+    },
+    {
+        "code":  "P025",
+        "en":  "Impurities on/from sole plate",
+        "vn":  "Tạp chất từ tấm đế"
+    },
+    {
+        "code":  "P026",
+        "en":  "Unit turns off inadvertently",
+        "vn":  "Thiết bị tự động tắt"
+    },
+    {
+        "code":  "P027",
+        "en":  "No auto-off or malfunction",
+        "vn":  "Thiết bị không tự động tắt khi máy có vấn đề"
+    },
+    {
+        "code":  "P028",
+        "en":  "Steam rate too high/ too low/ No steam",
+        "vn":  "Tỉ lệ hơi nước quá cao/ thấp/ không có"
+    },
+    {
+        "code":  "P029",
+        "en":  "Stops working when water is added",
+        "vn":  "Ngừng hoạt động trong khi thêm nước"
+    },
+    {
+        "code":  "P030",
+        "en":  "Cannot reset",
+        "vn":  "Không thể reset"
+    },
+    {
+        "code":  "P031",
+        "en":  "Difficult to replace/operate part",
+        "vn":  "Khó thay thế / vận hành các vật liệu"
+    },
+    {
+        "code":  "P032",
+        "en":  "spray dirty water",
+        "vn":  "Phun nước bẩn"
+    },
+    {
+        "code":  "P033",
+        "en":  "feet unbalance/uneven",
+        "vn":  "Chân đế không cân bằng"
+    },
+    {
+        "code":  "P034",
+        "en":  "Temperature out of spec",
+        "vn":  "Nhiệu độ vượt spec"
+    },
+    {
+        "code":  "P035",
+        "en":  "Timer knob can\u0027t rotate",
+        "vn":  "Núm không thể xoay"
+    },
+    {
+        "code":  "P036",
+        "en":  "Burst/drip/leakage water",
+        "vn":  "Nước bị rỉ / dơ"
+    },
+    {
+        "code":  "P037",
+        "en":  "Control dial/knob/lock \u0026 release button operate not smooth",
+        "vn":  "Núm hoạt động không mượt"
+    },
+    {
+        "code":  "P038",
+        "en":  "Cover/handle/part can\u0027t release",
+        "vn":  "Ty cầm không lấy ra được"
+    },
+    {
+        "code":  "P039",
+        "en":  "No power",
+        "vn":  "Không nguồn"
+    },
+    {
+        "code":  "P040",
+        "en":  "Steam leakage",
+        "vn":  "Rò rỉ hơi nước"
+    },
+    {
+        "code":  "P041",
+        "en":  "No anti-drip/drop function",
+        "vn":  "Không có chức năng chống rớt nước"
+    },
+    {
+        "code":  "P042",
+        "en":  "Burst steam weak",
+        "vn":  "Hơi nước yếu"
+    },
+    {
+        "code":  "P043",
+        "en":  "Part can\u0027t be locked firmly",
+        "vn":  "Vật liệu không chắc chắn"
+    },
+    {
+        "code":  "P044",
+        "en":  "No function at \"Min\" steam setting",
+        "vn":  "Không có chức năng cài đặt hơi nước \"min\""
+    },
+    {
+        "code":  "P045",
+        "en":  "Turn on no function",
+        "vn":  "Không có chức năng bật"
+    },
+    {
+        "code":  "P046",
+        "en":  "Abnormal smell",
+        "vn":  "Có mùi lạ"
+    },
+    {
+        "code":  "P047",
+        "en":  "Poor adhesive",
+        "vn":  "Không có độ bám"
+    },
+    {
+        "code":  "P048",
+        "en":  "Pressure relief valve mal-function",
+        "vn":  "Van giảm áp bị lỗi"
+    },
+    {
+        "code":  "P049",
+        "en":  "Air power out of spec",
+        "vn":  "Công suất không khí vượt tiêu chuẩn"
+    },
+    {
+        "code":  "P050",
+        "en":  "Air flow out of spec",
+        "vn":  "Luồng không khí vượt tiêu chuẩn"
+    },
+    {
+        "code":  "P051",
+        "en":  "Suction out of spec",
+        "vn":  "Sức hút vượt tiêu chuẩn"
+    },
+    {
+        "code":  "P052",
+        "en":  "Run time out of spec",
+        "vn":  "Thời gian chạy vượt tiêu chuẩn"
+    },
+    {
+        "code":  "P053",
+        "en":  "No positive sound(click, ding)/feel when operate",
+        "vn":  "Am thanh lạ khi hoạt động"
+    },
+    {
+        "code":  "P054",
+        "en":  "Mis-alignment assembling",
+        "vn":  "Lắp ráp sai tiêu chuẩn"
+    },
+    {
+        "code":  "P055",
+        "en":  "Interlock switch cannot be activated by fixture in spec. length",
+        "vn":  "Công tắc khóa tự động không hoạt động theo tiêu chuẩn"
+    },
+    {
+        "code":  "P056",
+        "en":  "Dimension out of drawing spec.",
+        "vn":  "Kích thước không đúng theo bản vẽ"
+    },
+    {
+        "code":  "P057",
+        "en":  "ALCI malfunction",
+        "vn":  "ALCI chức năng"
+    },
+    {
+        "code":  "P058",
+        "en":  "Brush roller not spinning",
+        "vn":  "Con lăn bàn chải không quay"
+    },
+    {
+        "code":  "P059",
+        "en":  "Wheel malfunction(sway,block,wheel bar jammed,loose,can\u0027t jam side wheel etc.)",
+        "vn":  "Bánh xe bị trục trặc"
+    },
+    {
+        "code":  "P060",
+        "en":  "Rotation failure",
+        "vn":  "Lỗi khi xoay núm"
+    },
+    {
+        "code":  "P061",
+        "en":  "Anti-static/ESD failure",
+        "vn":  "Lỗi chống tĩnh điện ESD"
+    },
+    {
+        "code":  "P062",
+        "en":  "Malfunction with LED/sensor alarming",
+        "vn":  "Led / cảm biến báo động bị lỗi"
+    },
+    {
+        "code":  "P063",
+        "en":  "Float malfunction",
+        "vn":  "Phao bị lỗi"
+    },
+    {
+        "code":  "P064",
+        "en":  "UI display information is abnormal",
+        "vn":  "Thông tin hiển thị bị lỗi"
+    },
+    {
+        "code":  "P065",
+        "en":  "Charger/dock/adapter intermittent/malfunction",
+        "vn":  "Bộ sạc bị lỗi"
+    },
+    {
+        "code":  "P066",
+        "en":  "Connection failure as poor rivet/spot-welding/untrasonic welding etc.",
+        "vn":  "Kết nối lỗi do vết hàn"
+    },
+    {
+        "code":  "P067",
+        "en":  "Spray water shape does not meet the spec",
+        "vn":  "Hình dạng phun nước không đúng tiêu chuẩn"
+    },
+    {
+        "code":  "P068",
+        "en":  "Brush rollor not stop at 45° Angle",
+        "vn":  "Con lăn không dừng ở 45°"
+    },
+    {
+        "code":  "P069",
+        "en":  "Remote control failure",
+        "vn":  "Lỗi điều khiển từ xa"
+    },
+    {
+        "code":  "P070",
+        "en":  "Fan-jet failure",
+        "vn":  "Lỗi cánh quạt"
+    },
+    {
+        "code":  "P071",
+        "en":  "RTT failed/Alarming(Start test mode,stop under white black cell/can not go forward straightly/stop during runing",
+        "vn":  "Hoạt động không bình thường"
+    },
+    {
+        "code":  "P072",
+        "en":  "Can\u0027t find the dock",
+        "vn":  "Không thể tìm phich cắm"
+    },
+    {
+        "code":  "P073",
+        "en":  "Evacuation failure",
+        "vn":  "Lỗi tản nhiệt"
+    },
+    {
+        "code":  "P074",
+        "en":  "No voice out",
+        "vn":  "Không có tiếng"
+    },
+    {
+        "code":  "P075",
+        "en":  "Can not step into jam test",
+        "vn":  "Không thể kiểm tra chế độ"
+    },
+    {
+        "code":  "P076",
+        "en":  "Can not rebound( bumbper/Lider bumper/r charging charpnel)",
+        "vn":  "Không thể bạt lại"
+    },
+    {
+        "code":  "P077",
+        "en":  "Bumper triger failure",
+        "vn":  "Lỗi kích hoat"
+    },
+    {
+        "code":  "P078",
+        "en":  "Camera function test failed",
+        "vn":  "Chức năng máy ảnh không hoạt động"
+    },
+    {
+        "code":  "P079",
+        "en":  "Cycling",
+        "vn":  "Chế độ đạp"
+    },
+    {
+        "code":  "P080",
+        "en":  "Capert detective function failure",
+        "vn":  "Phát hiện lỗi chức năng"
+    },
+    {
+        "code":  "P081",
+        "en":  "Magnetic stripe function failure",
+        "vn":  "Lỗi chức năng dải công suất"
+    },
+    {
+        "code":  "P082",
+        "en":  "Normal model test does not alarm after raise the host",
+        "vn":  "Cân không báo động khi nâng máy lên"
+    },
+    {
+        "code":  "P083",
+        "en":  "Normal model test no alarm for dust box removel",
+        "vn":  "Cân không báo động khi bỏ thùng ra"
+    },
+    {
+        "code":  "P084",
+        "en":  "The robot stopped during normal model",
+        "vn":  "Robot ngừng hoat động"
+    },
+    {
+        "code":  "P085",
+        "en":  "Battery issue",
+        "vn":  "Lỗi pin"
+    },
+    {
+        "code":  "P086",
+        "en":  "Not pumping water/flow rate failure",
+        "vn":  "Không bơm nước, tốc độ dòng chảy thất bại"
+    },
+    {
+        "code":  "P087",
+        "en":  "PCBA hardware / HWD information checking failed",
+        "vn":  "Thông tin trên PCBA không đúng"
+    },
+    {
+        "code":  "P088",
+        "en":  "Abnormal noise / whistle / noise by friction",
+        "vn":  "Tiếng ồn bất thường do ma sát"
+    },
+    {
+        "code":  "P089",
+        "en":  "Missing accessory parts",
+        "vn":  "Thiếu phụ kiện"
+    },
+    {
+        "code":  "P090",
+        "en":  "Others",
+        "vn":  "Khác"
+    },
+    {
+        "code":  "A001",
+        "en":  "Missing Part",
+        "vn":  "Thiếu linh kiện"
+    },
+    {
+        "code":  "A002",
+        "en":  "Part broken/loose/damaged",
+        "vn":  "Linh kiện bị hư, gãy"
+    },
+    {
+        "code":  "A003",
+        "en":  "Screw post/hole broken/stressed mark",
+        "vn":  "Lỗ bị biến dạng"
+    },
+    {
+        "code":  "A004",
+        "en":  "Part distorted/deformed/bend",
+        "vn":  "Vật liệu bị biến dạng"
+    },
+    {
+        "code":  "A005",
+        "en":  "Power cord not tied properly",
+        "vn":  "Dây điẹn không được buộc đúng cách"
+    },
+    {
+        "code":  "A006",
+        "en":  "Shade/color not as sample, Color mismatch/shaded/deviation",
+        "vn":  "Màu sắc sai lệch so với mẫu"
+    },
+    {
+        "code":  "A007",
+        "en":  "Chipped/cracked",
+        "vn":  "Vật liệu bị nứt"
+    },
+    {
+        "code":  "A008",
+        "en":  "Excessive dampness/moisture",
+        "vn":  "Độ ẩm không theo tiêu chuẩn"
+    },
+    {
+        "code":  "A009",
+        "en":  "Carton marks incorrect",
+        "vn":  "Dấu trên thùng carton không đúng"
+    },
+    {
+        "code":  "A010",
+        "en":  "Carton size out of spec",
+        "vn":  "Kích thước carton không đúng"
+    },
+    {
+        "code":  "A011",
+        "en":  "Content incorrect/ incorrect assortment",
+        "vn":  "Nội dung không chính xác"
+    },
+    {
+        "code":  "A012",
+        "en":  "Hangtags/price tags mis-sized, misplaced, missing",
+        "vn":  "Thẻ treo sai kích thước, mất, trùng lặp"
+    },
+    {
+        "code":  "A013",
+        "en":  "Dirt/ oil/glue marks/ stains",
+        "vn":  "Vết dầu, bẩn, keo"
+    },
+    {
+        "code":  "A014",
+        "en":  "Poor plating /painting /sanding/electroplating",
+        "vn":  "Mạ, sơn kém"
+    },
+    {
+        "code":  "A015",
+        "en":  "Rust /mildew /corrosion",
+        "vn":  "Rỉ sét, ăn mòn"
+    },
+    {
+        "code":  "A016",
+        "en":  "Label/Sticker-misplaced, missing, incorrect, damaged, unsecured",
+        "vn":  "Nhãn bị mất, không chính xác nội dung"
+    },
+    {
+        "code":  "A017",
+        "en":  "Poly bag wrong size",
+        "vn":  "Túi PE sai kích thước"
+    },
+    {
+        "code":  "A018",
+        "en":  "Poly bag, information on bag incorrect",
+        "vn":  "Túi PE sai thông tin"
+    },
+    {
+        "code":  "A019",
+        "en":  "Quantity incorrect",
+        "vn":  "Sai số  lượng"
+    },
+    {
+        "code":  "A020",
+        "en":  "Folding of carton or literatures incorrect",
+        "vn":  "Gấp thùng cartion hay tài liệu không đúng"
+    },
+    {
+        "code":  "A021",
+        "en":  "Gift box color/ size/ quality incorrect",
+        "vn":  "Màu, kích thước, chất lượng thùng màu không đúng"
+    },
+    {
+        "code":  "A022",
+        "en":  "Bar code label incorrect",
+        "vn":  "Nhãn QR không đúng"
+    },
+    {
+        "code":  "A023",
+        "en":  "Incorrect packing and marking",
+        "vn":  "Đóng gói và đánh dấu sai quy định"
+    },
+    {
+        "code":  "A024",
+        "en":  "Flow-mark/sink/ burnt mark/White mark",
+        "vn":  "Dấu trầy bóng, vết trắng"
+    },
+    {
+        "code":  "A025",
+        "en":  "Excessive flash/burr",
+        "vn":  "Bavia"
+    },
+    {
+        "code":  "A026",
+        "en":  "Scratch",
+        "vn":  "Trầy"
+    },
+    {
+        "code":  "A027",
+        "en":  "Incorrect instruction",
+        "vn":  "Lắp ráp không đúng tiêu chuẩn"
+    },
+    {
+        "code":  "A028",
+        "en":  "Step",
+        "vn":  "Độ vênh"
+    },
+    {
+        "code":  "A029",
+        "en":  "Gap",
+        "vn":  "Độ hở"
+    },
+    {
+        "code":  "A030",
+        "en":  "Label on unit when it is not supposed to be there",
+        "vn":  "Dán tem sai bị trí"
+    },
+    {
+        "code":  "A031",
+        "en":  "Logo/brand scratched/damaged",
+        "vn":  "Hư logo thương hiệu"
+    },
+    {
+        "code":  "A032",
+        "en":  "Silkscreen incorrect/wrong location",
+        "vn":  "Màn hình lụa sai vị trí"
+    },
+    {
+        "code":  "A033",
+        "en":  "Tilted, unstable or uneven mating parts",
+        "vn":  "Các vật liệu lắp ráp không khít"
+    },
+    {
+        "code":  "A034",
+        "en":  "Screw boss cracked",
+        "vn":  "Ốc vít bị nứt"
+    },
+    {
+        "code":  "A035",
+        "en":  "Rating/Warning label damaged/tore but legible",
+        "vn":  "Tem bị rách"
+    },
+    {
+        "code":  "A036",
+        "en":  "Thread end not trimmed",
+        "vn":  "Đầu phun nhựa không cắt"
+    },
+    {
+        "code":  "A037",
+        "en":  "Thread residue / Other residue",
+        "vn":  "Dư nhựa"
+    },
+    {
+        "code":  "A038",
+        "en":  "Water residue",
+        "vn":  "Dư lượng nước"
+    },
+    {
+        "code":  "A039",
+        "en":  "Tube/hole/orifice jammed",
+        "vn":  "Ống, lỗ bị kẹt"
+    },
+    {
+        "code":  "A040",
+        "en":  "Poor sewing",
+        "vn":  "May kém chất lượng"
+    },
+    {
+        "code":  "A041",
+        "en":  "Wrong components/material",
+        "vn":  "Sai vật liệu"
+    },
+    {
+        "code":  "A042",
+        "en":  "Date code illegible",
+        "vn":  "Date code không rõ ràng"
+    },
+    {
+        "code":  "A043",
+        "en":  "Incorrect date code",
+        "vn":  "Date code không đúng"
+    },
+    {
+        "code":  "A044",
+        "en":  "Paper products poor printing",
+        "vn":  "Giấy in kém chất lượng"
+    },
+    {
+        "code":  "A045",
+        "en":  "Poor over-mold",
+        "vn":  "Nấm mốc"
+    },
+    {
+        "code":  "A046",
+        "en":  "Bad lean angle",
+        "vn":  "Gốc nghiêng xấu"
+    },
+    {
+        "code":  "A047",
+        "en":  "Incorrect switch position setting on",
+        "vn":  "Bật cài đăt vị trí chuyển đổi không chính xác"
+    },
+    {
+        "code":  "A048",
+        "en":  "Other",
+        "vn":  "Khác"
+    }
+];
+
+    // Fast Vietnamese accent remover for searching
+    function removeAccents(str) {
+      if (!str) return '';
+      return str
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .toLowerCase()
+        .trim();
+    }
+
+    // Pre-process items for fast lookup and mapping
+    const itemsMap = new Map();
+    const searchIndex = RAW_DATA.map(item => {
+      const type = item.code.charAt(0).toUpperCase();
+      const processed = {
+        code: item.code,
+        en: item.en,
+        vn: item.vn,
+        type: type,
+        cleanCode: item.code.toLowerCase(),
+        cleanEn: removeAccents(item.en),
+        cleanVn: removeAccents(item.vn)
+      };
+      itemsMap.set(item.code, processed);
+      return processed;
+    });
+
+    // Elements
+    const searchInput = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearBtn');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const emptyState = document.getElementById('emptyState');
+    const resultCountText = document.getElementById('resultCountText');
+    const filterChips = document.querySelectorAll('.chip');
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toastMsg');
+
+    // Modal elements
+    const detailModal = document.getElementById('detailModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalCode = document.getElementById('modalCode');
+    const modalVn = document.getElementById('modalVn');
+    const modalEn = document.getElementById('modalEn');
+    const btnModalCopy = document.getElementById('btnModalCopy');
+    const btnModalClose = document.getElementById('btnModalClose');
+    const btnModalCopyCode = document.getElementById('btnModalCopyCode');
+    const btnModalCopyVn = document.getElementById('btnModalCopyVn');
+    const btnModalCopyEn = document.getElementById('btnModalCopyEn');
+    let currentModalItem = null;
+
+    let currentFilter = 'ALL';
+    let currentSearchTerm = '';
+
+    // Highlight text helper with Vietnamese accent support
+    function highlightText(text, keyword) {
+      if (!keyword || !text) return escapeHtml(text);
+      const cleanKeyword = removeAccents(keyword);
+      if (!cleanKeyword) return escapeHtml(text);
+
+      const normText = text.normalize('NFC');
+      const cleanCharIndices = [];
+      let cleanT = '';
+
+      for (let i = 0; i < normText.length; i++) {
+        const ch = normText[i];
+        const cleanCh = removeAccents(ch);
+        cleanT += cleanCh;
+        for (let k = 0; k < cleanCh.length; k++) {
+          cleanCharIndices.push(i);
+        }
+      }
+
+      const idx = cleanT.indexOf(cleanKeyword);
+      if (idx === -1) return escapeHtml(text);
+
+      const startOrig = cleanCharIndices[idx];
+      const endOrig = cleanCharIndices[idx + cleanKeyword.length - 1] + 1;
+
+      const before = text.substring(0, startOrig);
+      const match = text.substring(startOrig, endOrig);
+      const after = text.substring(endOrig);
+
+      return `${escapeHtml(before)}<mark>${escapeHtml(match)}</mark>${escapeHtml(after)}`;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Toast
+    let toastTimeout = null;
+    function showToast(msg) {
+      toastMsg.innerText = msg;
+      toast.classList.add('show');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // Copy to clipboard
+    function copyText(text, label = 'mã') {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(`Đã sao chép ${label}!`);
+        }).catch(() => fallbackCopy(text, label));
+      } else {
+        fallbackCopy(text, label);
+      }
+    }
+
+    function fallbackCopy(text, label) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast(`Đã sao chép ${label}!`);
+      } catch (err) {
+        showToast('Không thể sao chép');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // Modal
+    function openModal(item) {
+      currentModalItem = item;
+      modalCode.innerText = item.code;
+      modalVn.innerText = item.vn;
+      modalEn.innerText = item.en;
+      detailModal.classList.add('open');
+    }
+
+    function closeModal() {
+      detailModal.classList.remove('open');
+    }
+
+    detailModal.addEventListener('click', (e) => {
+      if (e.target === detailModal) closeModal();
+    });
+    modalContent.addEventListener('click', (e) => e.stopPropagation());
+    btnModalClose.addEventListener('click', closeModal);
+
+    btnModalCopy.addEventListener('click', () => {
+      if (!currentModalItem) return;
+      const full = `Defect Code: ${currentModalItem.code}\nDefect Description In Vietnamese: ${currentModalItem.vn}\nDefect Description In English: ${currentModalItem.en}`;
+      copyText(full, 'toàn bộ thông tin');
+    });
+
+    btnModalCopyCode.addEventListener('click', () => {
+      if (!currentModalItem) return;
+      copyText(currentModalItem.code, `Defect Code ${currentModalItem.code}`);
+    });
+
+    btnModalCopyVn.addEventListener('click', () => {
+      if (!currentModalItem) return;
+      copyText(currentModalItem.vn, `mô tả tiếng Việt`);
+    });
+
+    btnModalCopyEn.addEventListener('click', () => {
+      if (!currentModalItem) return;
+      copyText(currentModalItem.en, `mô tả tiếng Anh`);
+    });
+
+    // Render cards
+    function render() {
+      const query = currentSearchTerm.trim();
+      const cleanQ = removeAccents(query);
+
+      let filtered = searchIndex;
+
+      // Filter by category
+      if (currentFilter !== 'ALL') {
+        filtered = filtered.filter(item => item.type === currentFilter);
+      }
+
+      // Filter across all 3 columns
+      if (cleanQ) {
+        filtered = filtered.filter(item => {
+          return item.cleanCode.includes(cleanQ) || 
+                 item.cleanEn.includes(cleanQ) || 
+                 item.cleanVn.includes(cleanQ);
+        });
+      }
+
+      resultCountText.innerText = `Tìm thấy ${filtered.length} / ${RAW_DATA.length} mã`;
+
+      if (filtered.length === 0) {
+        resultsContainer.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+
+      // Build cards with exact 3 headers: Defect Code, Defect Description In English, Defect Description In Vietnamese
+      const html = filtered.map(item => {
+        const highlightedCode = highlightText(item.code, query);
+        const highlightedVn = highlightText(item.vn, query);
+        const highlightedEn = highlightText(item.en, query);
+
+        return `
+          <article class="card" data-code="${escapeHtml(item.code)}">
+            <!-- 1. Defect Code -->
+            <div class="card-code-section">
+              <div>
+                <div class="label-header">Defect Code</div>
+                <span class="code-box">${highlightedCode}</span>
+              </div>
+            </div>
+
+            <!-- 2. Defect Description In Vietnamese -->
+            <div class="field-box box-vn">
+              <div class="field-name">Defect Description In Vietnamese</div>
+              <div class="field-value">${highlightedVn}</div>
+            </div>
+
+            <!-- 3. Defect Description In English -->
+            <div class="field-box box-en">
+              <div class="field-name">Defect Description In English</div>
+              <div class="field-value">${highlightedEn}</div>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      resultsContainer.innerHTML = html;
+    }
+
+    // Delegated click handler on resultsContainer
+    resultsContainer.addEventListener('click', (e) => {
+      const copyBtn = e.target.closest('[data-copy]');
+      if (copyBtn) {
+        e.stopPropagation();
+        const code = copyBtn.getAttribute('data-copy');
+        copyText(code, `Defect Code ${code}`);
+        return;
+      }
+
+      const card = e.target.closest('.card');
+      if (card) {
+        const code = card.getAttribute('data-code');
+        const item = itemsMap.get(code);
+        if (item) openModal(item);
+      }
+    });
+
+    // Reset search
+    function resetSearch() {
+      searchInput.value = '';
+      currentSearchTerm = '';
+      clearBtn.classList.remove('visible');
+      currentFilter = 'ALL';
+      filterChips.forEach(c => c.classList.toggle('active', c.dataset.filter === 'ALL'));
+      render();
+      searchInput.focus();
+    }
+
+    // Input events
+    searchInput.addEventListener('input', (e) => {
+      currentSearchTerm = e.target.value;
+      clearBtn.classList.toggle('visible', currentSearchTerm.length > 0);
+      render();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      currentSearchTerm = '';
+      clearBtn.classList.remove('visible');
+      render();
+      searchInput.focus();
+    });
+
+    // Category chips
+    filterChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        filterChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentFilter = chip.dataset.filter;
+        render();
+      });
+    });
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
